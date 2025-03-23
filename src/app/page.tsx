@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 type PiUser = {
   uid: string
@@ -21,29 +21,43 @@ declare global {
 
 export default function Home() {
   const [user, setUser] = useState<PiUser | null>(null)
+  const [sdkStatus, setSdkStatus] = useState<string>('')
+
+  // Hiển thị trạng thái SDK khi trang vừa load
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (window.Pi) {
+        setSdkStatus('✅ SDK Pi đã được load')
+      } else {
+        setSdkStatus('❌ SDK Pi chưa load hoặc bị chặn')
+      }
+    }
+  }, [])
 
   const handleLogin = async () => {
     try {
-      if (!window.Pi) {
-        alert('Pi SDK chưa sẵn sàng. Vui lòng mở trong Pi Browser.')
+      const Pi = window.Pi
+      if (!Pi || typeof Pi.authenticate !== 'function') {
+        setSdkStatus('⚠️ Pi SDK chưa sẵn sàng hoặc không tồn tại')
         return
       }
 
-      window.Pi.init({
+      setSdkStatus('✅ SDK sẵn sàng. Bắt đầu đăng nhập...')
+
+      Pi.init({
         version: '2.0',
-        sandbox: true,
+        sandbox: true, // để true trong quá trình phát triển
       })
 
       const scopes = ['username']
-      const auth = await window.Pi.authenticate(scopes, (payment) => {
-        console.log('⏳ Giao dịch chưa hoàn tất:', payment)
+      const auth = await Pi.authenticate(scopes, (payment) => {
+        setSdkStatus('🔁 Có giao dịch chưa hoàn tất')
       })
 
       setUser(auth.user)
-      console.log('✅ Đăng nhập thành công:', auth.user)
+      setSdkStatus(`✅ Đăng nhập thành công: ${auth.user.username}`)
     } catch (err) {
-      console.error('❌ Lỗi đăng nhập Pi:', err)
-      alert('Đăng nhập Pi thất bại.')
+      setSdkStatus('❌ Lỗi khi gọi Pi.authenticate() hoặc người dùng huỷ đăng nhập')
     }
   }
 
@@ -63,6 +77,9 @@ export default function Home() {
           Đăng nhập Pi
         </button>
       )}
+
+      {/* Hiển thị trạng thái SDK / lỗi */}
+      <p className="mt-4 text-sm text-gray-500">{sdkStatus}</p>
     </main>
   )
 }
