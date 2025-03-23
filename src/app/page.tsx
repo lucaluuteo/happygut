@@ -7,35 +7,43 @@ type PiUser = {
   username: string
 }
 
+declare global {
+  interface Window {
+    Pi?: {
+      init: (config: { version: string; sandbox?: boolean }) => void
+      authenticate: (
+        scopes: string[],
+        onIncompletePaymentFound: (payment: unknown) => void
+      ) => Promise<{ user: PiUser }>
+    }
+  }
+}
+
 export default function Home() {
   const [user, setUser] = useState<PiUser | null>(null)
 
   const handleLogin = async () => {
     try {
-      const Pi = (window as any).Pi
-      if (!Pi) {
-        alert('Pi SDK chưa sẵn sàng. Hãy mở trong Pi Browser.')
+      if (!window.Pi) {
+        alert('Pi SDK chưa sẵn sàng. Vui lòng mở trong Pi Browser.')
         return
       }
 
-      // Khởi tạo SDK nếu chưa có
-      Pi.init({
+      window.Pi.init({
         version: '2.0',
-        sandbox: true, // đổi thành false nếu deploy production
+        sandbox: true,
       })
 
-      // Gọi đăng nhập
       const scopes = ['username']
-      function onIncompletePaymentFound(payment: any) {
+      const auth = await window.Pi.authenticate(scopes, (payment) => {
         console.log('⏳ Giao dịch chưa hoàn tất:', payment)
-      }
+      })
 
-      const auth = await Pi.authenticate(scopes, onIncompletePaymentFound)
       setUser(auth.user)
       console.log('✅ Đăng nhập thành công:', auth.user)
     } catch (err) {
       console.error('❌ Lỗi đăng nhập Pi:', err)
-      alert('Đăng nhập Pi thất bại. Kiểm tra lại Pi Browser.')
+      alert('Đăng nhập Pi thất bại.')
     }
   }
 
