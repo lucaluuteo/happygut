@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 
 export default function ProductPage() {
   return (
@@ -12,7 +11,7 @@ export default function ProductPage() {
           Bài thuốc gia truyền đặc trị táo bón, kết hợp thảo dược thiên nhiên giúp hỗ trợ hệ tiêu hóa toàn diện.
         </p>
         <div className="flex justify-center mb-8">
-          <Image
+          <img
             src="/images/luu-nhuan-linh.jpg"
             alt="Hình ảnh sản phẩm Lưu Nhuận Linh"
             width={300}

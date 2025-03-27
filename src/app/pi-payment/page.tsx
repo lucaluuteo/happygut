@@ -46,7 +46,7 @@ declare global {
   }
 }
 
-export default function Home() {
+export default function PiPaymentPage() {
   const [user, setUser] = useState<PiUser | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [status, setStatus] = useState<string>('🔄 Đang tải SDK...')
@@ -120,7 +120,8 @@ export default function Home() {
         {
           amount: 0.001,
           memo: 'Thanh toán thử nghiệm HappyGut',
-          metadata: { productId: 'sample01' },
+          metadata: { productId: 'sample01',
+            productName: 'Lưu Nhuận Linh'},
         },
         {
           onReadyForServerApproval: async (paymentId: string) => {
@@ -154,19 +155,22 @@ export default function Home() {
               console.log('✅ [complete] response:', data)
               alert('✅ Giao dịch đã complete: ' + JSON.stringify(data))
 
-              // Gửi lên Supabase sau khi complete thành công
-              await fetch('/api/order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  paymentId,
-                  txid,
-                  username: user?.username || '',
-                  uid: user?.uid || '',
-                  amount: 0.001,
-                  productId: 'sample01',
-                }),
-              })
+              if (data?.success) {
+                await fetch('/api/order', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    paymentId,
+                    txid,
+                    username: user?.username || '',
+                    uid: user?.uid || '',
+                    amount: 0.001,
+                    productId: 'sample01',
+                  }),
+                })
+              } else {
+                console.warn('❌ Không lưu đơn hàng vì thiếu dữ liệu giao dịch.')
+              }
             } catch (err) {
               console.error('❌ Lỗi khi gọi /complete:', err)
               alert('❌ Lỗi complete: ' + getErrorMessage(err))
