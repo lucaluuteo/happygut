@@ -16,7 +16,7 @@ type PiPaymentResponse = {
   metadata: {
     productId: string
   }
-  transaction: {
+  transaction?: {
     txid: string
   }
 }
@@ -50,11 +50,12 @@ export async function POST(req: Request) {
     }
 
     const payment: PiPaymentResponse = piData
+    console.log('📦 Dữ liệu Pi API trả về:', payment)
 
     const { data, error } = await supabase.from('orders').insert([
       {
         payment_id: payment.identifier,
-        txid: payment.transaction.txid,
+        txid: payment.transaction?.txid || '',
         uid: payment.user_uid,
         amount: payment.amount,
         product_id: payment.metadata?.productId || '',
