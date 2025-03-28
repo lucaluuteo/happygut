@@ -6,7 +6,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 )
 
-const PI_API_URL = 'https://api.minepi.com/v2/payments' // ✅ Sửa từ /payments → /v2/payments
+const PI_API_URL = 'https://api.minepi.com/v2/payments'
 const PI_SERVER_API_KEY = process.env.PI_SERVER_API_KEY || ''
 
 type PiPaymentResponse = {
@@ -38,19 +38,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({ txid }),
     })
 
-    let piData: any = null
-    const text = await piRes.text()
-
-    try {
-      piData = JSON.parse(text)
-    } catch (e) {
-      console.error('❌ Không parse được JSON từ Pi API:', text)
-      return NextResponse.json({
-        success: false,
-        error: 'Lỗi từ Pi API (không phải JSON)',
-        detail: text,
-      }, { status: 500 })
-    }
+    const piData = await piRes.json()
 
     if (!piRes.ok) {
       console.error('❌ Lỗi từ Pi API:', piData)
@@ -82,6 +70,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, data }, { status: 200 })
   } catch (error: unknown) {
     console.error('❌ Lỗi xử lý server:', error)
-    return NextResponse.json({ success: false, error: 'Lỗi máy chủ', detail: String(error) }, { status: 500 })
+
+    let message = 'Lỗi máy chủ'
+    if (typeof error === 'object' && error !== null && 'message' in error) {
+      message = String((error as { message: string }).message)
+    }
+
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
