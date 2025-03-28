@@ -46,7 +46,7 @@ declare global {
   }
 }
 
-export default function PiPaymentPage() {
+export default function Home() {
   const [user, setUser] = useState<PiUser | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [status, setStatus] = useState<string>('🔄 Đang tải SDK...')
@@ -78,24 +78,27 @@ export default function PiPaymentPage() {
     try {
       const auth = await Pi.authenticate(['username', 'payments'], async (payment: PiPayment) => {
         console.log('⚠️ Có giao dịch chưa hoàn tất:', payment)
-        alert('⚠️ Có giao dịch chưa hoàn tất — sẽ xử lý ngay')
+        alert('⚠️ Có giao dịch chưa hoàn tất — đang xử lý...')
 
-        const paymentId = payment.identifier
         const txid = payment.transaction?.txid
-
-        if (paymentId && txid) {
-          const res = await fetch('/api/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId, txid }),
-          })
-
-          const result = await res.json()
-          console.log('✅ Đã gọi complete giao dịch treo:', result)
-          alert('✅ Giao dịch treo đã được complete: ' + JSON.stringify(result))
-        } else {
-          alert('⚠️ Giao dịch treo không có txid, không thể complete hoặc cancel')
+        if (!txid) {
+          console.warn('⚠️ Giao dịch treo không có txid, bỏ qua xử lý.')
+          alert('⚠️ Giao dịch treo không có txid, bỏ qua.')
+          return
         }
+
+        const res = await fetch('/api/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentId: payment.identifier,
+            txid,
+          }),
+        })
+
+        const result = await res.json()
+        console.log('✅ Đã xử lý giao dịch treo:', result)
+        alert('✅ Giao dịch treo đã được xử lý: ' + JSON.stringify(result))
       })
 
       setUser(auth.user)
@@ -120,8 +123,7 @@ export default function PiPaymentPage() {
         {
           amount: 0.001,
           memo: 'Thanh toán thử nghiệm HappyGut',
-          metadata: { productId: 'sample01',
-            productName: 'Lưu Nhuận Linh'},
+          metadata: { productId: 'sample01' },
         },
         {
           onReadyForServerApproval: async (paymentId: string) => {
@@ -155,22 +157,19 @@ export default function PiPaymentPage() {
               console.log('✅ [complete] response:', data)
               alert('✅ Giao dịch đã complete: ' + JSON.stringify(data))
 
-              if (data?.success) {
-                await fetch('/api/order', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    paymentId,
-                    txid,
-                    username: user?.username || '',
-                    uid: user?.uid || '',
-                    amount: 0.001,
-                    productId: 'sample01',
-                  }),
-                })
-              } else {
-                console.warn('❌ Không lưu đơn hàng vì thiếu dữ liệu giao dịch.')
-              }
+              // Gửi lên Supabase sau khi complete thành công
+              await fetch('/api/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  paymentId,
+                  txid,
+                  username: user?.username || '',
+                  uid: user?.uid || '',
+                  amount: 0.001,
+                  productId: 'sample01',
+                }),
+              })
             } catch (err) {
               console.error('❌ Lỗi khi gọi /complete:', err)
               alert('❌ Lỗi complete: ' + getErrorMessage(err))
@@ -182,8 +181,8 @@ export default function PiPaymentPage() {
             alert('❌ Người dùng huỷ giao dịch')
           },
 
-          onError: (error: unknown, payment: unknown) => {
-            console.error('🔥 [error]', error, payment)
+          onError: (error: unknown) => {
+            console.error('🔥 [error]', error)
             alert('🔥 Lỗi thanh toán: ' + getErrorMessage(error))
           },
         }
