@@ -153,11 +153,17 @@ export default function Home() {
                 body: JSON.stringify({ paymentId, txid }),
               })
 
-              const data = await res.json()
+              const data: { success: boolean; [key: string]: unknown } = await res.json()
               console.log('✅ [complete] response:', data)
+
+              if (!data.success) {
+                alert('❌ Complete thất bại: ' + JSON.stringify(data))
+                console.warn('❌ Không lưu Supabase do lỗi complete:', data)
+                return
+              }
+
               alert('✅ Giao dịch đã complete: ' + JSON.stringify(data))
 
-              // Gửi lên Supabase sau khi complete thành công
               await fetch('/api/order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -170,7 +176,7 @@ export default function Home() {
                   productId: 'sample01',
                 }),
               })
-            } catch (err) {
+            } catch (err: unknown) {
               console.error('❌ Lỗi khi gọi /complete:', err)
               alert('❌ Lỗi complete: ' + getErrorMessage(err))
             }
