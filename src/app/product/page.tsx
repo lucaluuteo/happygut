@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { PiNetwork } from '@pinet/pi-sdk'
 
@@ -8,8 +10,8 @@ const pi = new PiNetwork({
 
 export default function PaymentPage() {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [message, setMessage] = useState(null)
+  const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
 
   const handlePayment = async () => {
     try {
@@ -29,32 +31,6 @@ export default function PaymentPage() {
       }
 
       const { identifier, txid } = payment.data
-
-      // Thêm lắng nghe sự kiện thanh toán hoàn tất từ Pi Wallet
-      pi.onPaymentComplete(async (result) => {
-        if (result.success && result.data.transaction_verified) {
-          // Gọi API /api/complete để xác nhận giao dịch
-          const res = await fetch('/api/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              paymentId: identifier,
-              txid: result.data.transaction.txid,
-            }),
-          })
-          
-          const data = await res.json()
-          
-          if (data.success) {
-            setMessage('Thanh toán thành công và đã được ghi nhận!')
-          } else {
-            setError('Lỗi khi lưu giao dịch vào Supabase.')
-          }
-        } else {
-          setError('Thanh toán thất bại hoặc chưa được xác thực hoàn tất.')
-        }
-      })
-
       setMessage('Giao dịch đã được approve. Vui lòng hoàn tất thanh toán trong Pi Wallet.')
     } catch (err) {
       console.error('Lỗi trong quá trình thanh toán:', err)
