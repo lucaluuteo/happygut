@@ -16,9 +16,13 @@ type PiPaymentResponse = {
   metadata: {
     productId: string
   }
-  transaction?: {
+  transaction: {
     txid: string
   }
+  from_address: string
+  memo: string
+  network: string
+  username?: string
 }
 
 export async function POST(req: Request) {
@@ -49,17 +53,24 @@ export async function POST(req: Request) {
       }, { status: 400 })
     }
 
+    console.log('📦 Dữ liệu Pi API trả về:', piData)
+
     const payment: PiPaymentResponse = piData
-    console.log('📦 Dữ liệu Pi API trả về:', payment)
 
     const { data, error } = await supabase.from('orders').insert([
       {
         payment_id: payment.identifier,
         txid: payment.transaction?.txid || '',
-        uid: payment.user_uid,
-        amount: payment.amount,
+        uid: payment.user_uid || '',
+        amount: payment.amount ?? null, // Đảm bảo dữ liệu được ghi nhận là số hoặc null
+        price_pi: payment.amount ?? null, // Nếu cột này là để ghi nhận số Pi thanh toán
         product_id: payment.metadata?.productId || '',
+        username: payment.username || '',
+        wallet_address: payment.from_address || '',
+        memo: payment.memo || '',
         status: 'completed',
+        network: payment.network || 'Pi Testnet',
+        created_at: new Date().toISOString()
       },
     ])
 
