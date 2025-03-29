@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Dữ liệu không đầy đủ' }, { status: 400 })
     }
 
-    const { data, error } = await supabase.from('orders').insert([
+    const { data, error } = await supabase.from('Orders').insert([
       {
         payment_id: payment.identifier,
         txid: payment.transaction.txid,

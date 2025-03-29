@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
 
   const { paymentId, txid, username, uid, amount, productId } = body
 
-  const { data, error } = await supabase.from('orders').insert([
+  const { data, error } = await supabase.from('Orders').insert([
     {
       payment_id: paymentId,
       txid,
