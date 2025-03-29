@@ -13,12 +13,15 @@ type PiPaymentResponse = {
   identifier: string
   user_uid: string
   amount: number
+  memo: string // ✅ Thêm dòng này
   metadata: {
     productId: string
   }
   transaction: {
     txid: string
   }
+  from_address?: string // ✅ Thêm để tránh lỗi TypeScript nếu không được trả về
+  network?: string // ✅ Thêm để tránh lỗi TypeScript nếu không được trả về
 }
 
 export async function POST(req: Request) {
