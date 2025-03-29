@@ -9,22 +9,6 @@ const supabase = createClient(
 const PI_API_URL = 'https://api.minepi.com/v2/payments'
 const PI_SERVER_API_KEY = process.env.PI_SERVER_API_KEY || ''
 
-type PiPaymentResponse = {
-  identifier: string
-  user_uid: string
-  amount: number
-  metadata: {
-    productId: string
-  }
-  transaction: {
-    txid: string
-  }
-  from_address: string
-  memo: string
-  network: string
-  username?: string
-}
-
 export async function POST(req: Request) {
   try {
     const { paymentId, txid } = await req.json()
@@ -55,21 +39,21 @@ export async function POST(req: Request) {
 
     console.log('📦 Dữ liệu Pi API trả về:', piData)
 
-    const payment: PiPaymentResponse = piData
+    const { identifier, user_uid, amount, metadata, transaction, from_address, memo, network } = piData
 
     const { data, error } = await supabase.from('orders').insert([
       {
-        payment_id: payment.identifier,
-        txid: payment.transaction?.txid || '',
-        uid: payment.user_uid || '',
-        amount: payment.amount ?? null, // Đảm bảo dữ liệu được ghi nhận là số hoặc null
-        price_pi: payment.amount ?? null, // Nếu cột này là để ghi nhận số Pi thanh toán
-        product_id: payment.metadata?.productId || '',
-        username: payment.username || '',
-        wallet_address: payment.from_address || '',
-        memo: payment.memo || '',
+        payment_id: identifier,
+        txid: transaction?.txid || null,
+        uid: user_uid || null,
+        amount: amount ?? null,
+        price_pi: amount ?? null,
+        product_id: metadata?.productId || '',
+        username: piData.username || '',
+        wallet_address: from_address || '',
+        memo: memo || '',
         status: 'completed',
-        network: payment.network || 'Pi Testnet',
+        network: network || 'Pi Testnet',
         created_at: new Date().toISOString()
       },
     ])
