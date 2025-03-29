@@ -9,6 +9,18 @@ const supabase = createClient(
 const PI_API_URL = 'https://api.minepi.com/v2/payments'
 const PI_SERVER_API_KEY = process.env.PI_SERVER_API_KEY || ''
 
+type PiPaymentResponse = {
+  identifier: string
+  user_uid: string
+  amount: number
+  metadata: {
+    productId: string
+  }
+  transaction: {
+    txid: string
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { paymentId, txid } = await req.json()
@@ -37,24 +49,19 @@ export async function POST(req: Request) {
       }, { status: 400 })
     }
 
-    console.log('📦 Dữ liệu Pi API trả về:', piData)
-
-    const { identifier, user_uid, amount, metadata, transaction, from_address, memo, network } = piData
+    const payment: PiPaymentResponse = piData
 
     const { data, error } = await supabase.from('orders').insert([
       {
-        payment_id: identifier,
-        txid: transaction?.txid || null,
-        uid: user_uid || null,
-        amount: amount ?? null,
-        price_pi: amount ?? null,
-        product_id: metadata?.productId || '',
-        username: piData.username || '',
-        wallet_address: from_address || '',
-        memo: memo || '',
+        payment_id: payment.identifier,
+        txid: payment.transaction?.txid || null,
+        user_uid: payment.user_uid,
+        amount: payment.amount,
+        product_id: payment.metadata?.productId || null,
         status: 'completed',
-        network: network || 'Pi Testnet',
-        created_at: new Date().toISOString()
+        memo: payment.memo || null,
+        wallet_address: payment.from_address || null,
+        network: payment.network || null,
       },
     ])
 
@@ -66,12 +73,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, data }, { status: 200 })
   } catch (error: unknown) {
     console.error('❌ Lỗi xử lý server:', error)
-
-    let message = 'Lỗi máy chủ'
-    if (typeof error === 'object' && error !== null && 'message' in error) {
-      message = String((error as { message: string }).message)
-    }
-
-    return NextResponse.json({ success: false, error: message }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Lỗi máy chủ' }, { status: 500 })
   }
 }
