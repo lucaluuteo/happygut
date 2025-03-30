@@ -20,7 +20,7 @@ export default function LandingPage() {
 
         <div className="flex justify-center mb-10">
           <Image
-            src="/images/luu-nhuan-linh.jpg"
+            src="/images/luu-nhuan-linh.JPG"
             alt="Sản phẩm Lưu Nhuận Linh"
             width={300}
             height={300}

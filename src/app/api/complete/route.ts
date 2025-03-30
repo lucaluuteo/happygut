@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.SUPABASE_URL || ''
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+)
 
 const PI_API_URL = 'https://api.minepi.com/v2/payments'
 const PI_SERVER_API_KEY = process.env.PI_SERVER_API_KEY || ''
@@ -16,25 +16,21 @@ type PiPaymentResponse = {
   memo: string
   metadata: {
     productId: string
+    price_pi?: number
+    product_name?: string
+    username?: string
+    uid?: string
   }
   transaction: {
     txid: string
-    verified: boolean
   }
   from_address?: string
   network?: string
-  status: {
-    developer_approved: boolean
-    transaction_verified: boolean
-    developer_completed: boolean
-    cancelled: boolean
-    user_cancelled: boolean
-  }
 }
 
 export async function POST(req: Request) {
   try {
-    const { paymentId, txid } = await req.json()
+    const { paymentId, txid, price_pi, product_name, username, uid } = await req.json()
 
     if (!paymentId || !txid) {
       return NextResponse.json({ success: false, error: 'Thiếu paymentId hoặc txid' }, { status: 400 })
@@ -62,12 +58,6 @@ export async function POST(req: Request) {
 
     const payment: PiPaymentResponse = piData
 
-    // 📌 Kiểm tra giao dịch đã được xác thực hoàn tất chưa
-    if (!payment.status.transaction_verified) {
-      console.error('❌ Giao dịch chưa được xác thực hoàn tất:', payment)
-      return NextResponse.json({ success: false, error: 'Giao dịch chưa được xác thực hoàn tất' }, { status: 400 })
-    }
-
     // 📌 Thêm kiểm tra dữ liệu trước khi lưu
     if (!payment.amount || !payment.identifier || !payment.transaction?.txid) {
       console.error('❌ Dữ liệu không đầy đủ:', payment)
@@ -81,6 +71,10 @@ export async function POST(req: Request) {
         user_uid: payment.user_uid,
         amount: payment.amount,
         product_id: payment.metadata?.productId || null,
+        price_pi: price_pi || null,
+        product_name: product_name || null,
+        username: username || null,
+        uid: uid || null,
         memo: payment.memo || null,
         wallet_address: payment.from_address || null,
         network: payment.network || null,

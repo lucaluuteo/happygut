@@ -48,7 +48,6 @@ declare global {
 
 export default function Home() {
   const [user, setUser] = useState<PiUser | null>(null)
-  const [accessToken, setAccessToken] = useState<string | null>(null)
   const [status, setStatus] = useState<string>('🔄 Đang tải SDK...')
 
   useEffect(() => {
@@ -73,13 +72,39 @@ export default function Home() {
       return
     }
 
+    setStatus('🔐 Đang đăng nhập...')
+
     try {
-      const auth = await Pi.authenticate(['username', 'payments'], (payment: PiPayment) => {
+      const auth = await Pi.authenticate(['username', 'payments'], async (payment: PiPayment) => {
         console.log('⚠️ Có giao dịch chưa hoàn tất:', payment)
+        alert('⚠️ Có giao dịch chưa hoàn tất — đang xử lý...')
+
+        const txid = payment.transaction?.txid
+        if (!txid) {
+          console.warn('⚠️ Giao dịch treo không có txid, bỏ qua xử lý.')
+          alert('⚠️ Giao dịch treo không có txid, bỏ qua.')
+          return
+        }
+
+        const res = await fetch('/api/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentId: payment.identifier,
+            txid,
+            username: user?.username || null,
+            uid: user?.uid || null,
+            price_pi: 0.001,
+            product_name: 'Lưu Nhuận Linh'
+          }),
+        })
+
+        const result = await res.json()
+        console.log('✅ Đã xử lý giao dịch treo:', result)
+        alert('✅ Giao dịch treo đã được xử lý: ' + JSON.stringify(result))
       })
 
       setUser(auth.user)
-      setAccessToken(auth.accessToken)
       setStatus(`✅ Đăng nhập thành công: ${auth.user.username}`)
     } catch {
       setStatus('❌ Người dùng huỷ hoặc lỗi đăng nhập')
@@ -93,6 +118,8 @@ export default function Home() {
       return
     }
 
+    setStatus('💸 Đang tạo giao dịch...')
+
     try {
       await Pi.createPayment(
         {
@@ -103,50 +130,96 @@ export default function Home() {
         {
           onReadyForServerApproval: async (paymentId: string) => {
             console.log('📦 [approve] paymentId:', paymentId)
+            alert('📦 Gửi approve: ' + paymentId)
 
-            await fetch('/api/approve', {
+            const res = await fetch('/api/approve', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId }),
             })
+
+            const data = await res.json()
+            console.log('✅ [approve] server response:', data)
+            alert('✅ Approve xong: ' + JSON.stringify(data))
           },
 
           onReadyForServerCompletion: async (paymentId: string, txid: string) => {
             console.log('🎯 [complete] paymentId:', paymentId)
             console.log('🎯 [complete] txid:', txid)
+            alert('🎯 Sẵn sàng complete: ' + txid)
 
             try {
               const res = await fetch('/api/complete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ paymentId, txid }),
+                body: JSON.stringify({
+                  paymentId,
+                  txid,
+                  username: user?.username || null,
+                  uid: user?.uid || null,
+                  price_pi: 0.001,
+                  product_name: 'Lưu Nhuận Linh'
+                }),
               })
 
-              const data = await res.json()
+              const data: { success: boolean; [key: string]: unknown } = await res.json()
               console.log('✅ [complete] response:', data)
-            } catch (err) {
+
+              if (!data.success) {
+                alert('❌ Complete thất bại: ' + JSON.stringify(data))
+                console.warn('❌ Không lưu Supabase do lỗi complete:', data)
+                return
+              }
+
+              alert('✅ Giao dịch đã complete: ' + JSON.stringify(data))
+            } catch (err: unknown) {
               console.error('❌ Lỗi khi gọi /complete:', err)
+              alert('❌ Lỗi complete: ' + getErrorMessage(err))
             }
           },
 
           onCancel: (paymentId: string) => {
             console.log('❌ [cancelled] paymentId:', paymentId)
+            alert('❌ Người dùng huỷ giao dịch')
           },
 
           onError: (error: unknown) => {
             console.error('🔥 [error]', error)
+            alert('🔥 Lỗi thanh toán: ' + getErrorMessage(error))
           },
         }
       )
     } catch (err) {
       console.error('❌ createPayment failed:', err)
+      alert('❌ Gọi createPayment thất bại: ' + getErrorMessage(err))
+      setStatus('❌ Người dùng huỷ hoặc lỗi khi thanh toán')
     }
   }
 
   return (
-    <div>
-      <button onClick={handleLogin}>Đăng nhập Pi</button>
-      {user && <button onClick={handlePayment}>Thanh toán 0.001 Pi</button>}
-    </div>
+    <main className="p-8">
+      <h1 className="text-2xl font-bold mb-4">HappyGut Pi App</h1>
+
+      {user ? (
+        <div className="text-green-600">
+          <p>Xin chào <strong>{user.username}</strong>!</p>
+          <button
+            onClick={handlePayment}
+            className="mt-4 px-4 py-2 bg-green-600 text-white rounded"
+          >
+            Thanh toán 0.001 Pi
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={handleLogin}
+          className="px-4 py-2 bg-purple-600 text-white rounded"
+        >
+          Đăng nhập Pi
+        </button>
+      )}
+
+      <p className="mt-6 text-sm text-gray-500">{status}</p>
+    </main>
   )
 }
