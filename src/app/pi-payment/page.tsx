@@ -132,15 +132,25 @@ export default function Home() {
             console.log('📦 [approve] paymentId:', paymentId)
             alert('📦 Gửi approve: ' + paymentId)
 
-            const res = await fetch('/api/approve', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId }),
-            })
+            try {
+              const res = await fetch('/api/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paymentId }),
+              })
 
-            const data = await res.json()
-            console.log('✅ [approve] server response:', data)
-            alert('✅ Approve xong: ' + JSON.stringify(data))
+              const data = await res.json()
+              
+              if (data.success) {
+                alert('✅ Approve thành công, vui lòng tiếp tục thanh toán trong Pi Wallet.')
+              } else {
+                alert('❌ Approve thất bại, thử lại sau.')
+              }
+
+            } catch (error) {
+              console.error('❌ Lỗi khi gửi approve:', error)
+              alert('❌ Lỗi khi gửi approve, kiểm tra lại kết nối mạng.')
+            }
           },
 
           onReadyForServerCompletion: async (paymentId: string, txid: string) => {
@@ -167,11 +177,12 @@ export default function Home() {
 
               if (!data.success) {
                 alert('❌ Complete thất bại: ' + JSON.stringify(data))
-                console.warn('❌ Không lưu Supabase do lỗi complete:', data)
                 return
               }
 
               alert('✅ Giao dịch đã complete: ' + JSON.stringify(data))
+              // 🔀 Chuyển hướng về Trang chủ (Landing Page) và tự động refresh
+              window.location.href = 'https://happygut.vercel.app';
             } catch (err: unknown) {
               console.error('❌ Lỗi khi gọi /complete:', err)
               alert('❌ Lỗi complete: ' + getErrorMessage(err))
@@ -192,7 +203,6 @@ export default function Home() {
     } catch (err) {
       console.error('❌ createPayment failed:', err)
       alert('❌ Gọi createPayment thất bại: ' + getErrorMessage(err))
-      setStatus('❌ Người dùng huỷ hoặc lỗi khi thanh toán')
     }
   }
 
@@ -223,3 +233,4 @@ export default function Home() {
     </main>
   )
 }
+
